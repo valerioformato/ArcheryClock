@@ -46,10 +46,11 @@ class ClockDisplay():
         prefwin.setTitle_ ('Preferences')
         self.prefwincontroller = NSWindowController.alloc().initWithWindow_(prefwin)
         self.prefwincontroller.showWindow_(self.app)
-        # self.prefwin.makeKeyAndOrderFront_(self.app)
+        prefwin.makeKeyAndOrderFront_(self.app)
 
     def DisplayMainWindow(self):
         frame = ((400.0, 650.0), (self.WindowWidth, self.WindowHeight))
+        self.win = NSWindow.alloc()
         self.win.initWithContentRect_styleMask_backing_defer_ (frame, 15, 2, 0)
         self.win.setTitle_ ('Archery Clock')
         self.win.setFrame_display_animate_
@@ -73,8 +74,8 @@ class ClockDisplay():
         self.win.contentView().addSubview_( self.serialmenu )
 
         self.win.center()
-        self.win.orderFrontRegardless()          ## but this one does
-        self.win.makeMainWindow()
+        self.wincontroller = NSWindowController.alloc().initWithWindow_(self.win)
+        self.wincontroller.showWindow_(self.app)
         pass
 
     def SetupNotificationCenter(self):
@@ -143,8 +144,6 @@ class ClockDisplay():
         self.menuViewController.setClock_(self)
         self.menuViewController.showWindow_(self.menuViewController)
         # self.SetupMenus(self.app, self.app.delegate())
-
-        self.win     = NSWindow.alloc()
 
         #show main window
         self.DisplayMainWindow()
