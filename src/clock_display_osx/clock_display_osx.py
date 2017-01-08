@@ -13,10 +13,6 @@ class AppDelegate (NSObject):
         self.clock = clock
         pass
 
-    def displayPrefWindow_(self, sender):
-        self.clock.DisplayPreferencesWindow()
-        pass
-
     def buildSerialPortsMenu_(self, sender):
         self.clock.BuildSerialPortsMenu()
         pass
@@ -30,19 +26,70 @@ class AppDelegate (NSObject):
     def applicationDidFinishLaunching_(self, aNotification):
         pass
 
+class ClockWindowController(NSWindowController):
+    def setClock_(self, clock):
+        self.clock = clock
+        pass
+
+    @objc.IBAction
+    def displayPrefWindow_(self, sender):
+        self.clock.DisplayPreferencesWindow()
+        pass
+
 
 class ClockDisplay():
 
     def DisplayPreferencesWindow(self):
-        print "DEBUG: Called ClockDisplay::PreferencesWindow"
-        frame = ((100.0, 650.0), (self.WindowWidth, self.WindowHeight))
-        self.prefwin.initWithContentRect_styleMask_backing_defer_ (frame, 15, 2, 0)
-        print "DEBUG: ClockDisplay::PreferencesWindow init done"
-        self.prefwin.setTitle_ ('Preferences')
-        self.prefwin.display()
-        print "DEBUG: ClockDisplay::PreferencesWindow display done"
-        self.prefwin.makeKeyAndOrderFront_(self.app)
-        print "DEBUG: Exited ClockDisplay::PreferencesWindow"
+        frame = ((100.0, 650.0), (400.0, 300.0))
+        prefwin = NSWindow.alloc()
+        prefwin.initWithContentRect_styleMask_backing_defer_ (frame, 15, 2, 0)
+        prefwin.setTitle_ ('Preferences')
+        self.prefwincontroller = NSWindowController.alloc().initWithWindow_(prefwin)
+        self.prefwincontroller.showWindow_(self.app)
+        # self.prefwin.makeKeyAndOrderFront_(self.app)
+
+    def DisplayMainWindow(self):
+        frame = ((400.0, 650.0), (self.WindowWidth, self.WindowHeight))
+        self.win.initWithContentRect_styleMask_backing_defer_ (frame, 15, 2, 0)
+        self.win.setTitle_ ('Archery Clock')
+        self.win.setFrame_display_animate_
+
+        rescan = NSButton.alloc().initWithFrame_ (((10.0, 10.0), (100.0, 25.0)))
+        self.win.contentView().addSubview_ (rescan)
+        rescan.setBezelStyle_( 4 )
+        rescan.setTitle_( 'Rescan' )
+        rescan.setTarget_( self.app.delegate() )
+        rescan.setAction_( "buildSerialPortsMenu:" )
+
+        prefbut = NSButton.alloc().initWithFrame_ (((120.0, 10.0), (100.0, 25.0)))
+        self.win.contentView().addSubview_ (prefbut)
+        prefbut.setBezelStyle_( 4 )
+        prefbut.setTitle_( 'Pref.' )
+        prefbut.setTarget_( self.menuViewController )
+        prefbut.setAction_( "displayPrefWindow:" )
+
+        self.serialmenu = NSPopUpButton.alloc().initWithFrame_(((10.0, 100.0), (self.win.frame().size.width-20.0, 20.0)))
+        self.serialmenu.setTitle_("serialmenu")
+        self.win.contentView().addSubview_( self.serialmenu )
+
+        self.win.center()
+        self.win.orderFrontRegardless()          ## but this one does
+        self.win.makeMainWindow()
+        pass
+
+    def SetupNotificationCenter(self):
+
+        #close app if click on red button
+        self.not_cent.addObserver_selector_name_object_(self.app, 'stop:', 'NSWindowDidCloseNotification', self.win)
+        #refresh serial port list on menu click
+        self.not_cent.addObserver_selector_name_object_(self.app.delegate(), 'buildSerialPortsMenu:', 'NSPopUpButtonWillPopUpNotification', self.serialmenu)
+        pass
+
+    def SetupMenus(self, app, delegate):
+        prefmenu = self.app.mainMenu.itemAtIndex_(0).submenu
+        print prefmenu.isEnabled
+        pass
+
 
     def ScanSerialPorts(self):
         if sys.platform.startswith('win'):
@@ -73,8 +120,8 @@ class ClockDisplay():
         return result
 
     def BuildSerialPortsMenu(self):
-        self.testmenu.removeAllItems()
-        self.testmenu.addItemsWithTitles_( self.ScanSerialPorts() )
+        self.serialmenu.removeAllItems()
+        self.serialmenu.addItemsWithTitles_( self.ScanSerialPorts() )
         self.win.update()
         pass
 
@@ -88,55 +135,25 @@ class ClockDisplay():
         self.delegate.setClock_(self)
         NSApp().setDelegate_(self.delegate)
 
-        #setup notification center
+        #get notification center
         self.not_cent = Foundation.NSNotificationCenter.defaultCenter()
 
-        frame = ((100.0, 650.0), (self.WindowWidth, self.WindowHeight))
-        self.win.initWithContentRect_styleMask_backing_defer_ (frame, 15, 2, 0)
-        self.win.autorelease()
-        self.win.setTitle_ ('Archery Clock')
-        self.win.setFrame_display_animate_
-        self.wincontroller = NSWindowController.alloc()
-        self.wincontroller.initWithWindow_(self.win)
-        self.wincontroller.autorelease()
+        #set up main menu
+        self.menuViewController = ClockWindowController.alloc().initWithWindowNibName_("MainMenu")
+        self.menuViewController.setClock_(self)
+        self.menuViewController.showWindow_(self.menuViewController)
+        # self.SetupMenus(self.app, self.app.delegate())
 
+        self.win     = NSWindow.alloc()
 
-        bye = NSButton.alloc().initWithFrame_ (((120.0, 10.0), (100.0, 25.0)))
-        self.win.contentView().addSubview_( bye )
-        bye.setBezelStyle_( 4 )
-        bye.setTarget_ ( self.app )
-        bye.setAction_ ( 'stop:' )
-        bye.setEnabled_ ( 1 )
-        bye.setTitle_( 'ShutDown' )
+        #show main window
+        self.DisplayMainWindow()
 
-        rescan = NSButton.alloc().initWithFrame_ (((10.0, 10.0), (100.0, 25.0)))
-        self.win.contentView().addSubview_ (rescan)
-        rescan.setBezelStyle_( 4 )
-        rescan.setTitle_( 'Rescan' )
-        rescan.setTarget_( self.app.delegate() )
-        rescan.setAction_( "buildSerialPortsMenu:" )
-
-        prefbut = NSButton.alloc().initWithFrame_ (((230.0, 10.0), (100.0, 25.0)))
-        self.win.contentView().addSubview_ (prefbut)
-        prefbut.setBezelStyle_( 4 )
-        prefbut.setTitle_( 'Pref.' )
-        prefbut.setTarget_( self.app.delegate() )
-        prefbut.setAction_( "displayPrefWindow:" )
-
-        self.testmenu = NSPopUpButton.alloc().initWithFrame_(((10.0, 100.0), (self.win.frame().size.width-20.0, 20.0)))
-        self.testmenu.setTitle_("serialmenu")
-        self.win.contentView().addSubview_( self.testmenu )
-
-        self.not_cent.addObserver_selector_name_object_(self.app.delegate(), 'buildSerialPortsMenu:', 'NSPopUpButtonWillPopUpNotification', self.testmenu)
-
-        self.win.display()
-        self.win.orderFrontRegardless()          ## but this one does
-        self.win.makeMainWindow()
+        #setup notiication center
+        self.SetupNotificationCenter()
 
         AppHelper.runEventLoop()
 
     def __init__(self):
         self.WindowWidth  = 500.0
         self.WindowHeight = 200.0
-        self.prefwin = NSWindow.alloc()
-        self.win     = NSWindow.alloc()
